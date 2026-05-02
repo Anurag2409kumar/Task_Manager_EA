@@ -1,0 +1,332 @@
+import { useEffect, useState } from "react";
+import { Plus, Loader2, CheckSquare, Clock, AlertCircle, Search } from "lucide-react";
+import { getTasks, createTask, updateTask, deleteTask } from "../api/tasks";
+import { getProjects, getAllUsers } from "../api/projects";
+import { useAuth } from "../context/AuthContext";
+import Badge from "../components/ui/Badge";
+import Modal from "../components/ui/Modal";
+
+const STATUS_OPTIONS = ["pending", "in_progress", "completed"];
+const PRIORITY_OPTIONS = ["low", "medium", "high"];
+
+const priorityConfig: Record<string, { bg: string; color: string; dot: string }> = {
+  high: { bg: "#fef2f2", color: "#dc2626", dot: "#ef4444" },
+  medium: { bg: "#fff7ed", color: "#ea580c", dot: "#f97316" },
+  low: { bg: "#f8fafc", color: "#64748b", dot: "#94a3b8" },
+};
+
+export default function TasksPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "",
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const params: any = {};
+      if (filterStatus) params.status = filterStatus;
+      if (filterPriority) params.priority = filterPriority;
+      const res = await getTasks(params);
+      setTasks(res.tasks || []);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [filterStatus, filterPriority]);
+
+  useEffect(() => {
+    getProjects().then((r) => setProjects(r.projects || [])).catch(console.error);
+    if (isAdmin) getAllUsers().then((r) => setAllUsers(r.users || [])).catch(console.error);
+  }, [isAdmin]);
+
+  const handleCreate = async () => {
+    if (!createForm.title.trim() || !createForm.projectId) return setCreateError("Title aur project zaroori hain.");
+    setCreating(true); setCreateError("");
+    try {
+      await createTask({ ...createForm, assignedTo: createForm.assignedTo || undefined, deadline: createForm.deadline || undefined });
+      setCreateForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" });
+      setShowCreate(false);
+      load();
+    } catch (e: any) {
+      setCreateError(e?.response?.data?.message || "Task create karne mein error.");
+    } finally { setCreating(false); }
+  };
+
+  const handleStatusChange = async (taskId: string, status: string) => {
+    setUpdatingId(taskId);
+    try { await updateTask(taskId, { status }); load(); }
+    catch (e) { console.error(e); }
+    finally { setUpdatingId(""); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Yeh task delete karein?")) return;
+    try { await deleteTask(id); load(); } catch (e) { console.error(e); }
+  };
+
+  const filtered = tasks.filter((t) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return t.title?.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q);
+  });
+
+  const selectStyle: React.CSSProperties = {
+    padding: "9px 12px", border: "1.5px solid #e2e8f0", borderRadius: "10px",
+    fontSize: "13px", outline: "none", background: "white", fontFamily: "inherit", color: "#374151"
+  };
+
+  const formInputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 13px", border: "1.5px solid #e5e7eb",
+    borderRadius: "10px", fontSize: "14px", outline: "none",
+    boxSizing: "border-box", fontFamily: "inherit", color: "#111827"
+  };
+
+  return (
+    <div style={{ padding: "28px 32px", maxWidth: "900px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+        <div>
+          <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#1e1b4b", margin: 0, letterSpacing: "-0.3px" }}>Tasks</h1>
+          <p style={{ color: "#64748b", margin: "3px 0 0", fontSize: "13px" }}>
+            {filtered.length} task{filtered.length !== 1 ? "s" : ""} mili{filtered.length !== 1 ? "n" : ""}
+          </p>
+        </div>
+        {isAdmin && (
+          <button onClick={() => setShowCreate(true)} style={{
+            display: "flex", alignItems: "center", gap: "7px",
+            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+            color: "white", border: "none", borderRadius: "12px",
+            padding: "10px 18px", fontSize: "14px", fontWeight: 700,
+            cursor: "pointer", boxShadow: "0 4px 12px rgba(99,102,241,0.35)"
+          }}>
+            <Plus style={{ width: "16px", height: "16px" }} /> New Task
+          </button>
+        )}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+          <Search style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", width: "15px", height: "15px", color: "#94a3b8" }} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Task dhundein..."
+            style={{ ...selectStyle, paddingLeft: "36px", width: "100%", boxSizing: "border-box" }} />
+        </div>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
+          <option value="">Sab Status</option>
+          {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+        </select>
+        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} style={selectStyle}>
+          <option value="">Sab Priority</option>
+          {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+        {(filterStatus || filterPriority || search) && (
+          <button onClick={() => { setFilterStatus(""); setFilterPriority(""); setSearch(""); }}
+            style={{ padding: "9px 14px", background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", borderRadius: "10px", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+            ✕ Clear
+          </button>
+        )}
+      </div>
+
+      {/* Task List */}
+      {loading ? (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "200px" }}>
+          <Loader2 style={{ width: "28px", height: "28px", color: "#6366f1" }} />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "200px", textAlign: "center" }}>
+          <CheckSquare style={{ width: "48px", height: "48px", color: "#e2e8f0", marginBottom: "12px" }} />
+          <p style={{ color: "#94a3b8", fontWeight: 600, margin: 0 }}>No tasks found</p>
+          <p style={{ color: "#cbd5e1", fontSize: "13px", marginTop: "4px" }}>
+            {isAdmin ? 'Click "New Task" above.' : "No tasks have been assigned to you yet."}
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {filtered.map((task) => {
+            const pc = priorityConfig[task.priority] || priorityConfig.low;
+            return (
+              <div key={task._id} style={{
+                background: "white", borderRadius: "14px", padding: "16px 18px",
+                boxShadow: task.isOverdue ? "0 2px 12px rgba(239,68,68,0.12)" : "0 2px 8px rgba(0,0,0,0.06)",
+                border: task.isOverdue ? "1.5px solid #fecaca" : "1px solid #f1f5f9",
+                transition: "box-shadow 0.15s"
+              }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
+                  {/* Icon */}
+                  <div style={{ marginTop: "2px", flexShrink: 0 }}>
+                    {task.status === "completed"
+                      ? <CheckSquare style={{ width: "20px", height: "20px", color: "#10b981" }} />
+                      : task.isOverdue
+                      ? <AlertCircle style={{ width: "20px", height: "20px", color: "#ef4444" }} />
+                      : <Clock style={{ width: "20px", height: "20px", color: "#f59e0b" }} />}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Title row */}
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px", marginBottom: "8px" }}>
+                      <div>
+                        <h3 style={{
+                          fontSize: "15px", fontWeight: 700, margin: 0,
+                          color: task.status === "completed" ? "#94a3b8" : "#1e1b4b",
+                          textDecoration: task.status === "completed" ? "line-through" : "none"
+                        }}>
+                          {task.title}
+                        </h3>
+                        {task.description && (
+                          <p style={{ fontSize: "13px", color: "#94a3b8", margin: "3px 0 0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                            {task.description}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                        {/* Priority pill */}
+                        <span style={{
+                          display: "flex", alignItems: "center", gap: "5px",
+                          background: pc.bg, color: pc.color,
+                          fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px",
+                          textTransform: "capitalize"
+                        }}>
+                          <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: pc.dot, flexShrink: 0 }} />
+                          {task.priority}
+                        </span>
+                        <Badge variant={task.status as any}>{task.status.replace("_", " ")}</Badge>
+                        {task.isOverdue && <Badge variant="overdue">overdue</Badge>}
+                      </div>
+                    </div>
+
+                    {/* Meta */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "10px" }}>
+                      {task.projectId?.title && (
+                        <span style={{ fontSize: "12px", background: "#eff6ff", color: "#2563eb", padding: "3px 10px", borderRadius: "6px", fontWeight: 600 }}>
+                          📁 {task.projectId.title}
+                        </span>
+                      )}
+                      {task.assignedTo && (
+                        <span style={{ fontSize: "12px", background: "#f5f3ff", color: "#7c3aed", padding: "3px 10px", borderRadius: "6px", fontWeight: 600 }}>
+                          👤 {task.assignedTo.name}
+                        </span>
+                      )}
+                      {task.deadline && (
+                        <span style={{ fontSize: "12px", background: task.isOverdue ? "#fef2f2" : "#f8fafc", color: task.isOverdue ? "#dc2626" : "#64748b", padding: "3px 10px", borderRadius: "6px", fontWeight: 600 }}>
+                          📅 {new Date(task.deadline).toLocaleDateString("en-IN")}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <select value={task.status} onChange={(e) => handleStatusChange(task._id, e.target.value)}
+                        disabled={updatingId === task._id}
+                        style={{ fontSize: "12px", padding: "5px 10px", border: "1.5px solid #e2e8f0", borderRadius: "8px", outline: "none", background: "white", cursor: "pointer", fontFamily: "inherit" }}>
+                        {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                      </select>
+                      {updatingId === task._id && <Loader2 style={{ width: "14px", height: "14px", color: "#6366f1" }} />}
+                      {isAdmin && (
+                        <button onClick={() => handleDelete(task._id)} style={{
+                          marginLeft: "auto", fontSize: "12px", padding: "5px 14px",
+                          background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca",
+                          borderRadius: "8px", cursor: "pointer", fontWeight: 600
+                        }}>
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create Task Modal */}
+      <Modal isOpen={showCreate} onClose={() => { setShowCreate(false); setCreateError(""); }} title="Create New Task" size="lg">
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Task Title *</label>
+            <input value={createForm.title} onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
+              placeholder="e.g. Design landing page" style={formInputStyle}
+              onFocus={(e) => (e.target.style.borderColor = "#6366f1")}
+              onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")} />
+          </div>
+          <div>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Description</label>
+            <textarea value={createForm.description} onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+              placeholder="Task ki details..." rows={2}
+              style={{ ...formInputStyle, resize: "none" }}
+              onFocus={(e) => (e.target.style.borderColor = "#6366f1")}
+              onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Project *</label>
+              <select value={createForm.projectId} onChange={(e) => setCreateForm((f) => ({ ...f, projectId: e.target.value }))}
+                style={{ ...formInputStyle, appearance: "auto" }}>
+                <option value="">Project chunein...</option>
+                {projects.map((p) => <option key={p._id} value={p._id}>{p.title}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Assign To</label>
+              <select value={createForm.assignedTo} onChange={(e) => setCreateForm((f) => ({ ...f, assignedTo: e.target.value }))}
+                style={{ ...formInputStyle, appearance: "auto" }}>
+                <option value="">Unassigned</option>
+                {allUsers.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Priority</label>
+              <select value={createForm.priority} onChange={(e) => setCreateForm((f) => ({ ...f, priority: e.target.value }))}
+                style={{ ...formInputStyle, appearance: "auto" }}>
+                {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Deadline</label>
+              <input type="date" value={createForm.deadline} onChange={(e) => setCreateForm((f) => ({ ...f, deadline: e.target.value }))}
+                style={formInputStyle}
+                onFocus={(e) => (e.target.style.borderColor = "#6366f1")}
+                onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")} />
+            </div>
+          </div>
+          {createError && (
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", fontSize: "13px", padding: "10px 13px", borderRadius: "9px" }}>
+              ⚠️ {createError}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: "10px", paddingTop: "4px" }}>
+            <button onClick={() => setShowCreate(false)} style={{
+              flex: 1, padding: "11px", border: "1.5px solid #e5e7eb", borderRadius: "11px",
+              fontSize: "14px", fontWeight: 600, color: "#6b7280", background: "white", cursor: "pointer"
+            }}>Cancel</button>
+            <button onClick={handleCreate} disabled={creating} style={{
+              flex: 1, background: creating ? "#c4b5fd" : "linear-gradient(135deg, #6366f1, #8b5cf6)",
+              color: "white", border: "none", borderRadius: "11px", padding: "11px",
+              fontSize: "14px", fontWeight: 700, cursor: creating ? "not-allowed" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: "7px"
+            }}>
+              {creating && <Loader2 style={{ width: "15px", height: "15px" }} />}
+              Create Task
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
