@@ -20,8 +20,8 @@ export default function AuthPage() {
 
   const handleSubmit = async () => {
     setError("");
-    if (!form.email || !form.password) return setError("Email aur password zaroori hai.");
-    if (mode === "signup" && !form.name) return setError("Naam zaroori hai.");
+    if (!form.email || !form.password) return setError("Email and password are required.");
+    if (mode === "signup" && !form.name) return setError("Name is required.");
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -99,7 +99,7 @@ export default function AuthPage() {
             {mode === "signup" && (
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>
-                  Aapka Naam *
+                  Full Name *
                 </label>
                 <input name="name" value={form.name} onChange={handleChange} onKeyDown={handleKey}
                   placeholder="e.g. Rahul Sharma" style={inputStyle}
@@ -111,7 +111,7 @@ export default function AuthPage() {
             <div>
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Email *</label>
               <input name="email" type="email" value={form.email} onChange={handleChange} onKeyDown={handleKey}
-                placeholder="aap@example.com" style={inputStyle}
+                placeholder="you@example.com" style={inputStyle}
                 onFocus={(e) => (e.target.style.borderColor = "#7c3aed")}
                 onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")} />
             </div>
@@ -167,7 +167,7 @@ export default function AuthPage() {
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               <button onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
                 style={{ background: "none", border: "none", color: "#7c3aed", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
-                {mode === "login" ? "Sign Up karein" : "Sign In karein"}
+                {mode === "login" ? "Sign Up" : "Sign In"}
               </button>
             </p>
           </div>

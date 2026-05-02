@@ -56,7 +56,7 @@ export default function TasksPage() {
   }, [isAdmin]);
 
   const handleCreate = async () => {
-    if (!createForm.title.trim() || !createForm.projectId) return setCreateError("Title aur project zaroori hain.");
+    if (!createForm.title.trim() || !createForm.projectId) return setCreateError("Title and project are required.");
     setCreating(true); setCreateError("");
     try {
       await createTask({ ...createForm, assignedTo: createForm.assignedTo || undefined, deadline: createForm.deadline || undefined });
@@ -64,7 +64,7 @@ export default function TasksPage() {
       setShowCreate(false);
       load();
     } catch (e: any) {
-      setCreateError(e?.response?.data?.message || "Task create karne mein error.");
+      setCreateError(e?.response?.data?.message || "Error creating task.");
     } finally { setCreating(false); }
   };
 
@@ -76,7 +76,7 @@ export default function TasksPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yeh task delete karein?")) return;
+    if (!confirm("Delete this task?")) return;
     try { await deleteTask(id); load(); } catch (e) { console.error(e); }
   };
 
@@ -104,7 +104,7 @@ export default function TasksPage() {
         <div>
           <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#1e1b4b", margin: 0, letterSpacing: "-0.3px" }}>Tasks</h1>
           <p style={{ color: "#64748b", margin: "3px 0 0", fontSize: "13px" }}>
-            {filtered.length} task{filtered.length !== 1 ? "s" : ""} mili{filtered.length !== 1 ? "n" : ""}
+            {filtered.length} task{filtered.length !== 1 ? "s" : ""} found
           </p>
         </div>
         {isAdmin && (
@@ -124,15 +124,15 @@ export default function TasksPage() {
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
         <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
           <Search style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", width: "15px", height: "15px", color: "#94a3b8" }} />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Task dhundein..."
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..."
             style={{ ...selectStyle, paddingLeft: "36px", width: "100%", boxSizing: "border-box" }} />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={selectStyle}>
-          <option value="">Sab Status</option>
+          <option value="">All Status</option>
           {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
         </select>
         <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} style={selectStyle}>
-          <option value="">Sab Priority</option>
+          <option value="">All Priority</option>
           {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
         </select>
         {(filterStatus || filterPriority || search) && (
@@ -268,7 +268,7 @@ export default function TasksPage() {
           <div>
             <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Description</label>
             <textarea value={createForm.description} onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Task ki details..." rows={2}
+              placeholder="Task details..." rows={2}
               style={{ ...formInputStyle, resize: "none" }}
               onFocus={(e) => (e.target.style.borderColor = "#6366f1")}
               onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")} />
@@ -278,7 +278,7 @@ export default function TasksPage() {
               <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Project *</label>
               <select value={createForm.projectId} onChange={(e) => setCreateForm((f) => ({ ...f, projectId: e.target.value }))}
                 style={{ ...formInputStyle, appearance: "auto" }}>
-                <option value="">Project chunein...</option>
+                <option value="">Select a project...</option>
                 {projects.map((p) => <option key={p._id} value={p._id}>{p.title}</option>)}
               </select>
             </div>

@@ -47,7 +47,7 @@ export default function ProjectsPage() {
   }, [isAdmin]);
 
   const handleCreate = async () => {
-    if (!createForm.title.trim()) return setCreateError("Title zaroori hai.");
+    if (!createForm.title.trim()) return setCreateError("Title is required.");
     setCreating(true); setCreateError("");
     try {
       await createProject(createForm);
@@ -55,12 +55,12 @@ export default function ProjectsPage() {
       setShowCreate(false);
       load();
     } catch (e: any) {
-      setCreateError(e?.response?.data?.message || "Project create karne mein error.");
+      setCreateError(e?.response?.data?.message || "Error creating project.");
     } finally { setCreating(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Yeh project aur iske saare tasks delete karein?")) return;
+    if (!confirm("Delete this project and all its tasks?")) return;
     try { await deleteProject(id); load(); } catch (e) { console.error(e); }
   };
 
@@ -72,7 +72,7 @@ export default function ProjectsPage() {
       setSelectedProject(res.project);
       setSelectedUserId("");
       load();
-    } catch (e: any) { alert(e?.response?.data?.message || "Member add karne mein error."); }
+    } catch (e: any) { alert(e?.response?.data?.message || "Error adding member."); }
     finally { setAddingMember(false); }
   };
 
@@ -82,7 +82,7 @@ export default function ProjectsPage() {
       const res = await removeMember(selectedProject._id, userId);
       setSelectedProject(res.project);
       load();
-    } catch (e: any) { alert(e?.response?.data?.message || "Member remove karne mein error."); }
+    } catch (e: any) { alert(e?.response?.data?.message || "Error removing member."); }
   };
 
   const nonMembers = allUsers.filter(
@@ -236,7 +236,7 @@ export default function ProjectsPage() {
           <div>
             <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Description</label>
             <textarea value={createForm.description} onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Project ke baare mein kuch batayein..." rows={3}
+              placeholder="Describe the project..." rows={3}
               style={{ ...inputStyle, resize: "none" }}
               onFocus={(e) => (e.target.style.borderColor = "#10b981")}
               onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")} />
@@ -269,11 +269,11 @@ export default function ProjectsPage() {
         title={`Members — ${selectedProject?.title}`} size="lg">
         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Member Add Karein</label>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "8px" }}>Add Member</label>
             <div style={{ display: "flex", gap: "8px" }}>
               <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}
                 style={{ flex: 1, padding: "10px 12px", border: "1.5px solid #e5e7eb", borderRadius: "10px", fontSize: "14px", outline: "none", background: "white", fontFamily: "inherit" }}>
-                <option value="">User chunein...</option>
+                <option value="">Select a user...</option>
                 {nonMembers.map((u: any) => <option key={u._id} value={u._id}>{u.name} ({u.email})</option>)}
               </select>
               <button onClick={handleAddMember} disabled={!selectedUserId || addingMember} style={{

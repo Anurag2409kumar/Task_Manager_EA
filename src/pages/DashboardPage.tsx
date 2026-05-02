@@ -53,7 +53,7 @@ export default function DashboardPage() {
           Welcome, {user?.name?.split(" ")[0]} 👋
         </h1>
         <p style={{ color: "#64748b", margin: "4px 0 0", fontSize: "14px" }}>
-          Aaj aapke tasks ka overview yahan hai.
+          Here is your tasks overview for today.
         </p>
       </div>
 
@@ -106,7 +106,7 @@ export default function DashboardPage() {
               <span style={{ fontWeight: 700, color: "#1e1b4b", fontSize: "15px" }}>Overall Progress</span>
             </div>
             <p style={{ fontSize: "13px", color: "#94a3b8", margin: 0 }}>
-              {stats.completed} / {stats.total} tasks complete ho gaye
+              {stats.completed} / {stats.total} tasks completed
             </p>
           </div>
           <div style={{
@@ -141,12 +141,12 @@ export default function DashboardPage() {
         <span style={{ fontSize: "22px" }}>{user?.role === "admin" ? "👑" : "👤"}</span>
         <div>
           <p style={{ fontWeight: 700, color: user?.role === "admin" ? "#92400e" : "#065f46", margin: 0, fontSize: "14px" }}>
-            Aap <span style={{ textTransform: "capitalize" }}>{user?.role}</span> ke roop mein login hain
+            You are logged in as <span style={{ textTransform: "capitalize" }}>{user?.role}</span>
           </p>
           <p style={{ fontSize: "12px", color: user?.role === "admin" ? "#b45309" : "#047857", margin: "2px 0 0" }}>
             {user?.role === "admin"
-              ? "Aap projects, tasks create/delete kar sakte hain aur team manage kar sakte hain."
-              : "Aap assigned tasks dekh sakte hain aur unka status update kar sakte hain."}
+              ? "You can create/delete projects, tasks and manage the team."
+              : "You can view your assigned tasks and update their status."}
           </p>
         </div>
       </div>
